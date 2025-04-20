@@ -3,12 +3,8 @@ import pypdf
 from PIL import Image
 import fitz  # PyMuPDF
 import tempfile
-from st_draggable_list import DraggableList
 
-# 安裝 st-draggable-list 套件
-# pip install st-draggable-list
-
-# 設定樣式
+# 文清風格樣式
 def set_style():
     st.markdown("""
     <style>
@@ -60,7 +56,7 @@ def delete_page(pdf_path, page_num):
         writer.write(temp)
         return temp.name
 
-# 依新順序重排 PDF
+# 重新排序頁面
 def reorder_pdf(pdf_path, new_order):
     reader = pypdf.PdfReader(pdf_path)
     writer = pypdf.PdfWriter()
@@ -131,16 +127,20 @@ def main():
                 st.success(f"頁面 {idx+1} 已旋轉 {angle} 度")
                 st.experimental_rerun()
 
-        # 拖曳排序
-        st.subheader("🔀 拖曳重新排序頁面")
-        reorder_data = [
-            {"id": i, "label": f"頁面 {i+1}"} for i in range(len(pypdf.PdfReader(pdf_path).pages))
-        ]
-        reordered = DraggableList(reorder_data, key="pdf_reorder")
-        new_order = [item["id"] for item in reordered]
-
-        if new_order != list(range(len(new_order))):
-            pdf_path = reorder_pdf(pdf_path, new_order)
+        # 重新排序
+        st.subheader("🔀 重新排序頁面")
+        # 生成頁面選項
+        page_order = list(range(num_pages))
+        reordered = st.selectbox(
+            "選擇頁面順序 (如有更改)",
+            page_order,
+            format_func=lambda x: f"頁面 {x+1}",
+            key="reorder_selectbox"
+        )
+        
+        # 當頁面順序有變動時，更新 PDF
+        if reordered != page_order:
+            pdf_path = reorder_pdf(pdf_path, reordered)
             st.success("✅ 頁面順序已更新")
             st.experimental_rerun()
 
