@@ -29,8 +29,11 @@ def set_style():
 def generate_thumbnail(pdf_path, page_num):
     doc = fitz.open(pdf_path)
     page = doc.load_page(page_num)
-    pix = page.get_pixmap(matrix=fitz.Matrix(0.4, 0.4))
+    pix = page.get_pixmap(matrix=fitz.Matrix(0.4, 0.4))  # 設定縮放比例
     img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+    
+    # 確保圖片大小適合顯示
+    img.thumbnail((300, 300))  # 設定縮圖最大寬高為300
     return img
 
 # 旋轉頁面
@@ -104,7 +107,7 @@ def main():
                 idx = i + j
                 if idx < len(thumbnails):
                     with cols[j]:
-                        st.image(thumbnails[idx], use_container_width=True)
+                        st.image(thumbnails[idx], use_container_width=True)  # 使用容器寬度來適應顯示
                         action = st.radio(
                             f"頁面 {idx+1}",
                             ['無動作', '旋轉', '刪除'],
