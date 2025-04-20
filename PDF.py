@@ -17,6 +17,9 @@ if uploaded_files:
     rotate_degrees = []
     page_labels = []
 
+    page_info_list = []
+
+    # 收集所有 PDF 頁面資訊
     for file_index, uploaded_file in enumerate(uploaded_files):
         file_name = uploaded_file.name
         doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
@@ -28,31 +31,46 @@ if uploaded_files:
             img = img.resize((int(pix.width * 0.5), int(pix.height * 0.5)))  # 縮圖 50%
 
             label = f"{file_name} - 第 {page_index+1} 頁"
-            page_labels.append(label)
+            rotate_key = f"rotate_{file_index}_{page_index}"
+            if rotate_key not in st.session_state:
+                st.session_state[rotate_key] = 0
 
-            with st.container():
-                cols = st.columns(6)
-                col = cols[page_index % 6]  # 每 6 張換行
-                with col:
-                    st.image(img, caption=label, use_column_width=True)
+            page_info_list.append({
+                "file_index": file_index,
+                "file_name": file_name,
+                "uploaded_file": uploaded_file,
+                "page_index": page_index,
+                "label": label,
+                "img": img,
+                "rotate_key": rotate_key
+            })
 
-                    # 唯一 key 防止衝突
-                    remove = st.checkbox("刪除", key=f"remove_{file_index}_{page_index}")
+    # 預覽顯示：每行 6 張圖
+    for row_start in range(0, len(page_info_list), 6):
+        cols = st.columns(6)
+        for i in range(6):
+            if row_start + i < len(page_info_list):
+                info = page_info_list[row_start + i]
+                with cols[i]:
+                    st.image(info["img"], caption=info["label"], use_column_width=True)
 
-                    rotate_key = f"rotate_{file_index}_{page_index}"
-                    if rotate_key not in st.session_state:
-                        st.session_state[rotate_key] = 0
+                    remove = st.checkbox("刪除", key=f"remove_{info['file_index']}_{info['page_index']}")
+                    if st.button("🔄 旋轉 90°", key=f"rotate_btn_{info['file_index']}_{info['page_index']}"):
+                        st.session_state[info["rotate_key"]] = (st.session_state[info["rotate_key"]] + 90) % 360
 
-                    if st.button("🔄 旋轉 90°", key=f"rotate_btn_{file_index}_{page_index}"):
-                        st.session_state[rotate_key] = (st.session_state[rotate_key] + 90) % 360
+                    st.caption(f"旋轉角度：{st.session_state[info['rotate_key']]}°")
 
-                    st.caption(f"旋轉角度：{st.session_state[rotate_key]}°")
+                    all_pages.append((
+                        info["file_index"],
+                        info["file_name"],
+                        info["uploaded_file"],
+                        info["page_index"]
+                    ))
+                    remove_flags.append(remove)
+                    rotate_degrees.append(st.session_state[info["rotate_key"]])
+                    page_labels.append(info["label"])
 
-            all_pages.append((file_index, file_name, uploaded_file, page_index))
-            remove_flags.append(remove)
-            rotate_degrees.append(st.session_state[rotate_key])
-
-    # 頁面排序功能
+    # 排序功能
     st.subheader("📋 拖曳選擇要保留頁面並排序")
     page_order = st.multiselect(
         "✅ 選擇保留並排序的頁面（順序會照這個排列）",
@@ -60,6 +78,7 @@ if uploaded_files:
         default=[label for idx, label in enumerate(page_labels) if not remove_flags[idx]]
     )
 
+    # 合併 PDF
     if st.button("📎 合併 PDF"):
         writer = PdfWriter()
 
