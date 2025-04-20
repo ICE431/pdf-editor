@@ -96,46 +96,53 @@ def main():
                 pdf_paths.append(tmp.name)
 
         # 顯示所有頁面縮圖
-        thumbnails = [generate_thumbnail(pdf_paths[0], i) for i in range(len(pypdf.PdfReader(pdf_paths[0]).pages))]
-        actions = []
-        rotation_angles = []
+        all_actions = []  # 用於記錄所有的動作
+        all_rotation_angles = []  # 用於記錄所有的旋轉角度
 
         st.subheader("🖼 預覽與操作")
-        for i in range(0, len(thumbnails), 6):
-            cols = st.columns(6)
-            for j in range(6):
-                idx = i + j
-                if idx < len(thumbnails):
-                    with cols[j]:
-                        st.image(thumbnails[idx], use_container_width=True)  # 使用容器寬度來適應顯示
-                        action = st.radio(
-                            f"頁面 {idx+1}",
-                            ['無動作', '旋轉', '刪除'],
-                            key=f"action_{idx}"
-                        )
-                        actions.append(action)
-
-                        if action == '旋轉':
-                            angle = st.selectbox(
-                                f"旋轉角度 (頁面 {idx+1})",
-                                [90, 180, 270],
-                                index=0,
-                                key=f"angle_{idx}"
+        for pdf_path in pdf_paths:
+            reader = pypdf.PdfReader(pdf_path)
+            num_pages = len(reader.pages)
+            
+            # 生成該 PDF 文件的所有縮圖
+            pdf_thumbnails = [generate_thumbnail(pdf_path, i) for i in range(num_pages)]
+            
+            # 顯示每個 PDF 文件的縮圖
+            for i in range(0, num_pages, 6):
+                cols = st.columns(6)
+                for j in range(6):
+                    idx = i + j
+                    if idx < num_pages:
+                        with cols[j]:
+                            st.image(pdf_thumbnails[idx], use_container_width=True)
+                            action = st.radio(
+                                f"頁面 {idx+1}",
+                                ['無動作', '旋轉', '刪除'],
+                                key=f"action_{pdf_path}_{idx}"
                             )
-                            rotation_angles.append((idx, angle))
-                        else:
-                            rotation_angles.append((idx, 0))
+                            all_actions.append((pdf_path, idx, action))
+
+                            if action == '旋轉':
+                                angle = st.selectbox(
+                                    f"旋轉角度 (頁面 {idx+1})",
+                                    [90, 180, 270],
+                                    index=0,
+                                    key=f"angle_{pdf_path}_{idx}"
+                                )
+                                all_rotation_angles.append((pdf_path, idx, angle))
+                            else:
+                                all_rotation_angles.append((pdf_path, idx, 0))
 
         # 執行刪除
-        for idx, action in enumerate(actions):
+        for pdf_path, idx, action in all_actions:
             if action == '刪除':
-                pdf_paths[0] = delete_page(pdf_paths[0], idx)
+                pdf_paths[0] = delete_page(pdf_path, idx)
                 st.success(f"頁面 {idx+1} 已刪除")
 
         # 執行旋轉
-        for idx, angle in rotation_angles:
+        for pdf_path, idx, angle in all_rotation_angles:
             if angle != 0:
-                pdf_paths[0] = rotate_pdf(pdf_paths[0], idx, angle)
+                pdf_paths[0] = rotate_pdf(pdf_path, idx, angle)
                 st.success(f"頁面 {idx+1} 已旋轉 {angle} 度")
 
         # 重新排序頁面
