@@ -36,6 +36,29 @@ def generate_thumbnail(pdf_path, page_num):
     img.thumbnail((300, 300))  # 設定縮圖最大寬高為300
     return img
 
+# 旋轉頁面
+def rotate_pdf(pdf_path, page_num, angle):
+    reader = pypdf.PdfReader(pdf_path)
+    writer = pypdf.PdfWriter()
+    for i, page in enumerate(reader.pages):
+        if i == page_num:
+            page.rotate(angle)
+        writer.add_page(page)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
+        writer.write(temp)
+        return temp.name
+
+# 刪除頁面
+def delete_page(pdf_path, page_num):
+    reader = pypdf.PdfReader(pdf_path)
+    writer = pypdf.PdfWriter()
+    for i, page in enumerate(reader.pages):
+        if i != page_num:
+            writer.add_page(page)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
+        writer.write(temp)
+        return temp.name
+
 # 重新排序頁面
 def reorder_pdf(pdf_path, new_order):
     reader = pypdf.PdfReader(pdf_path)
