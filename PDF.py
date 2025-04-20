@@ -70,21 +70,24 @@ def main():
         rows = (num_pages // columns_per_row) + (1 if num_pages % columns_per_row != 0 else 0)
         
         # 顯示預覽圖（每行顯示3個頁面）
+        selected_page = None
         for row in range(rows):
             cols = st.columns(columns_per_row)
             for col in range(columns_per_row):
                 page_index = row * columns_per_row + col
                 if page_index < num_pages:  # 確保不會超出頁數
-                    cols[col].image(thumbnails[page_index], use_container_width=True)  # 使用 use_container_width
+                    img = thumbnails[page_index]
+                    cols[col].image(img, use_container_width=True)  # 使用 use_container_width
+                    if cols[col].button(f"選擇頁面 {page_index + 1} 旋轉", key=f"button_{page_index}"):
+                        selected_page = page_index  # 記錄選擇的頁面
 
-        # 旋轉控制
-        selected_page = st.slider("選擇旋轉頁面", 0, num_pages - 1, 0)
-        angle = st.slider("選擇旋轉角度", 0, 360, 0, 90)
-        
-        if angle != 0:
-            rotated_pdf = rotate_pdf(pdf_path, selected_page, angle)
-            st.success(f"頁面 {selected_page + 1} 已旋轉 {angle} 度！")
-
+        if selected_page is not None:
+            # 旋轉控制
+            angle = st.slider("選擇旋轉角度", 0, 360, 0, 90)
+            if angle != 0:
+                rotated_pdf = rotate_pdf(pdf_path, selected_page, angle)
+                st.success(f"頁面 {selected_page + 1} 已旋轉 {angle} 度！")
+                
         # 頁面排序
         page_order = list(range(num_pages))
         new_order = st.multiselect(
