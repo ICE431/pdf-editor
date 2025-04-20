@@ -5,19 +5,24 @@ from PIL import Image
 import tempfile
 from st_draggable_list import DraggableList
 
+# 設定頁面配置
 st.set_page_config(page_title="PDF 編輯器", page_icon="📄", layout="wide")
 st.title("📄 PDF 可視化編輯工具（預覽、刪除、旋轉）")
 
+# 上傳 PDF 文件
 uploaded_files = st.file_uploader("📤 上傳 PDF（可多選）", type="pdf", accept_multiple_files=True)
 
 if uploaded_files:
     st.header("👀 預覽並操作每一頁")
 
     all_pages = []
+    remove_flags = []
+    rotate_degrees = []
     page_info_list = []  # 用來儲存每頁的基本資料
 
     page_counter = 0  # 用來計數每一頁顯示的順序
 
+    # 預覽每頁 PDF 並顯示操作選項
     for uploaded_file in uploaded_files:
         file_name = uploaded_file.name
         doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
@@ -27,7 +32,7 @@ if uploaded_files:
             pix = page.get_pixmap(dpi=70)
             img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
 
-            # ✅ 縮小預覽 70%
+            # 縮小預覽 70%
             img = img.resize((int(pix.width * 0.7), int(pix.height * 0.7)))
 
             label = f"{file_name} - 第 {i+1} 頁"
@@ -39,7 +44,7 @@ if uploaded_files:
             
             with cols[col_index]:
                 # 顯示旋轉後的圖像
-                st.image(img, caption=label, use_column_width=True)
+                st.image(img, caption=label, use_container_width=True)
 
             with cols[(col_index + 1) % 6]:  # 旋轉與刪除按鈕
                 remove = st.checkbox(f"刪除這一頁", key=f"remove_{file_name}_{i}")
@@ -70,6 +75,7 @@ if uploaded_files:
     draggable_list = DraggableList(page_info_list, key="pdf_pages", width="100%")
     st.write(draggable_list)
 
+    # 合併 PDF
     if st.button("📎 合併 PDF"):
         writer = PdfWriter()
 
