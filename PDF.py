@@ -128,14 +128,12 @@ def main():
             if action == '刪除':
                 pdf_paths[0] = delete_page(pdf_paths[0], idx)
                 st.success(f"頁面 {idx+1} 已刪除")
-                st.experimental_rerun()
 
         # 執行旋轉
         for idx, angle in rotation_angles:
             if angle != 0:
                 pdf_paths[0] = rotate_pdf(pdf_paths[0], idx, angle)
                 st.success(f"頁面 {idx+1} 已旋轉 {angle} 度")
-                st.experimental_rerun()
 
         # 重新排序頁面
         st.subheader("🔀 重新排序頁面")
@@ -152,7 +150,6 @@ def main():
         if reordered != page_order:
             pdf_paths[0] = reorder_pdf(pdf_paths[0], reordered)
             st.success("✅ 頁面順序已更新")
-            st.experimental_rerun()
 
         # 合併選項
         if len(uploaded_files) > 1:
