@@ -137,12 +137,14 @@ def main():
                 st.success(f"頁面 {idx+1} 已旋轉 {angle} 度")
                 st.experimental_rerun()
 
-        # 重新排序
+        # 重新排序頁面
         st.subheader("🔀 重新排序頁面")
         page_order = list(range(len(pypdf.PdfReader(pdf_paths[0]).pages)))
-        reordered = st.selectbox(
-            "選擇頁面順序 (如有更改)",
-            page_order,
+        
+        # 更新為選擇頁面順序
+        reordered = st.multiselect(
+            "請選擇頁面順序 (拖動排序)",
+            options=page_order,
             format_func=lambda x: f"頁面 {x+1}",
             key="reorder_selectbox"
         )
