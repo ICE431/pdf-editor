@@ -22,10 +22,11 @@ if uploaded_files:
         uploaded_file.seek(0)
 
         for i, page in enumerate(doc):
-            pix = page.get_pixmap(dpi=70)
+            # ✅ 使用較高 DPI 來產生清晰圖片
+            pix = page.get_pixmap(dpi=150)
             img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
 
-            # ✅ 預覽縮小為 50%
+            # ✅ 縮小顯示 50%（保持清楚）
             img = img.resize((int(pix.width * 0.5), int(pix.height * 0.5)))
 
             label = f"{file_name} - 第 {i+1} 頁"
@@ -59,13 +60,13 @@ if uploaded_files:
 
         for idx, (name, file, page_num) in enumerate(all_pages):
             if remove_flags[idx]:
-                continue  # 刪除
+                continue  # 跳過被刪除的頁面
 
             file.seek(0)
             reader = PdfReader(file)
             page = reader.pages[page_num]
 
-            # 旋轉
+            # 加入旋轉角度
             degrees = rotate_degrees[idx]
             if degrees:
                 page.rotate(degrees)
