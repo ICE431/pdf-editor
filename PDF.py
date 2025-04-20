@@ -6,7 +6,7 @@ import tempfile
 
 # 設定 Streamlit 網頁的標題和圖示
 st.set_page_config(page_title="PDF 編輯器", page_icon="📄", layout="wide")
-st.title("📄 PDF 可視化編輯工具（預覽、刪除、旋轉）")
+st.title("📄 PDF 可視化編輯工具（預覽、刪除、旋轉、排序）")
 
 # 上傳 PDF 檔案
 uploaded_files = st.file_uploader("📤 上傳 PDF（可多選）", type="pdf", accept_multiple_files=True)
@@ -17,22 +17,24 @@ if uploaded_files:
     all_pages = []  # 儲存每頁的資料
     remove_flags = []  # 儲存每頁的刪除標記
     rotate_degrees = []  # 儲存每頁的旋轉角度
-    num_columns = 5  # 每行顯示 5 張圖片
+    num_columns = 6  # 每行顯示 6 張圖片
 
     for uploaded_file in uploaded_files:
         file_name = uploaded_file.name
         doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
         uploaded_file.seek(0)
 
-        # 使用這個變數來管理列（每行最多顯示5張）
+        # 使用這個變數來管理列（每行最多顯示6張）
         columns = st.columns(num_columns)
+
+        page_labels = []  # 用來顯示頁面順序的選項
 
         for i, page in enumerate(doc):
             # 使用較高 DPI 來產生清晰圖片
             pix = page.get_pixmap(dpi=150)
             img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
 
-            # 縮小顯示 50%（保持清楚）
+            # ✅ 縮小預覽 50%（保持清楚）
             img = img.resize((int(pix.width * 0.5), int(pix.height * 0.5)))
 
             label = f"{file_name} - 第 {i+1} 頁"
@@ -59,6 +61,11 @@ if uploaded_files:
             all_pages.append((file_name, uploaded_file, i))
             remove_flags.append(remove)
             rotate_degrees.append(st.session_state[rotate_key])
+            page_labels.append(label)
+
+        # 頁面排序選擇
+        st.subheader("📍 排序頁面")
+        reordered_page_labels = st.multiselect("請選擇頁面順序", page_labels, default=page_labels)
 
     # 合併 PDF 按鈕
     if st.button("📎 合併 PDF"):
