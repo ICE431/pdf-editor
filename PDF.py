@@ -1,38 +1,47 @@
-# 安裝依賴套件（只需執行一次）
-# pip install streamlit pypdf
-
 import streamlit as st
 from pypdf import PdfReader, PdfWriter
+from pdf2image import convert_from_bytes
 import tempfile
 
 st.set_page_config(page_title="PDF 編輯器", page_icon="📄")
-st.title("📄 線上 PDF 編輯工具")
-st.markdown("上傳多個 PDF，選擇要移除的頁面，然後合併下載。")
+st.title("📄 PDF 可視化編輯工具")
+st.markdown("上傳 PDF，選擇要移除的頁面，預覽後合併下載。")
 
-uploaded_files = st.file_uploader("📤 上傳 PDF 檔案（可多選）", type="pdf", accept_multiple_files=True)
+uploaded_files = st.file_uploader("📤 上傳 PDF（可多選）", type="pdf", accept_multiple_files=True)
 
 if uploaded_files:
     all_pages = []
     file_page_refs = []
+    preview_thumbnails = []
 
-    # 擷取所有 PDF 頁面，並列出讓使用者選擇刪除
-    for idx, file in enumerate(uploaded_files):
-        reader = PdfReader(file)
-        for i, page in enumerate(reader.pages):
-            label = f"{file.name} - 第 {i+1} 頁"
-            all_pages.append((file, i))
-            file_page_refs.append(label)
+    st.header("👀 PDF 預覽與選擇")
 
-    # 多選要「刪除」的頁面
+    for idx, uploaded_file in enumerate(uploaded_files):
+        pdf_name = uploaded_file.name
+        images = convert_from_bytes(uploaded_file.read(), dpi=100)
+        
+        # 必須重新打開 PDF 用於後續處理
+        uploaded_file.seek(0)
+        reader = PdfReader(uploaded_file)
+
+        for i, img in enumerate(images):
+            page_label = f"{pdf_name} - 第 {i+1} 頁"
+            st.image(img, caption=page_label, use_column_width=True)
+            all_pages.append((uploaded_file, i))  # 記錄檔案與頁碼
+            file_page_refs.append(page_label)
+            preview_thumbnails.append(img)
+
+    # ✅ 勾選要刪除的頁面
     pages_to_remove = st.multiselect("❌ 選擇你要刪除的頁面", file_page_refs)
 
-    # 合併按鈕
+    # ✅ 合併按鈕
     if st.button("📎 合併 PDF"):
         writer = PdfWriter()
 
         for file, page_num in all_pages:
             label = f"{file.name} - 第 {page_num+1} 頁"
             if label not in pages_to_remove:
+                file.seek(0)  # 每次重新開啟
                 reader = PdfReader(file)
                 writer.add_page(reader.pages[page_num])
 
