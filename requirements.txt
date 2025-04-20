@@ -2,4 +2,3 @@ streamlit
 pypdf
 PyMuPDF
 Pillow
-PyPDF2
