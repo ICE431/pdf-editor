@@ -42,9 +42,9 @@ def rotate_pdf(pdf_path, page_num, angle):
     # Open the PDF file
     doc = pypdf.PdfReader(pdf_path)
     page = doc.pages[page_num]
-    
-    # Rotate the page
-    page.rotate_clockwise(angle)
+
+    # Rotate the page (pypdf method)
+    page.rotate(angle)
     
     # Write the rotated PDF
     output = pypdf.PdfWriter()
@@ -122,7 +122,13 @@ def main():
                     )
                     
                     if action == '旋轉':
-                        angle = st.slider(f"選擇頁面 {page_index + 1} 旋轉角度", 0, 360, 0, 90)
+                        # 使用下拉選單選擇旋轉角度
+                        angle = st.selectbox(
+                            f"選擇頁面 {page_index + 1} 旋轉角度",
+                            options=[0, 90, 180, 270],
+                            index=0,  # 預設為 0 度
+                            key=f"select_angle_{page_index}"
+                        )
                         if angle != 0:
                             rotated_pdf = rotate_pdf(pdf_path, page_index, angle)
                             st.success(f"頁面 {page_index + 1} 已旋轉 {angle} 度！")
@@ -130,14 +136,15 @@ def main():
                     if action == '刪除':
                         pdf_path = delete_page(pdf_path, page_index)
                         st.success(f"頁面 {page_index + 1} 已刪除！")
-        
-        # 頁面排序
+
+        # **頁面排序部分** - 使用下拉選單進行頁面排序
         page_order = list(range(num_pages))
         new_order = st.multiselect(
             "重新排序頁面",
             page_order,
             default=page_order,
-            format_func=lambda x: f"頁面 {x + 1}"
+            format_func=lambda x: f"頁面 {x + 1}",
+            key="page_order"
         )
         
         if new_order != page_order:
