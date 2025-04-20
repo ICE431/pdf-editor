@@ -1,5 +1,5 @@
 import streamlit as st
-import PyPDF2
+import pypdf
 from PIL import Image
 import io
 import tempfile
@@ -18,14 +18,14 @@ def generate_thumbnail(pdf_path, page_num):
 # PDF 旋轉
 def rotate_pdf(pdf_path, page_num, angle):
     # Open the PDF file
-    doc = PyPDF2.PdfReader(pdf_path)
+    doc = pypdf.PdfReader(pdf_path)
     page = doc.pages[page_num]
     
     # Rotate the page
     page.rotate_clockwise(angle)
     
     # Write the rotated PDF
-    output = PyPDF2.PdfWriter()
+    output = pypdf.PdfWriter()
     output.add_page(page)
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
         temp_file.close()
@@ -33,10 +33,10 @@ def rotate_pdf(pdf_path, page_num, angle):
             output.write(f)
     return temp_file.name
 
-# 頁面排序（這裏是用 st.selectbox 或 st.multiselect）
+# 頁面排序（這裏是用 streamlit-draggable 或自訂排序邏輯）
 def reorder_pdf(pdf_path, new_order):
-    doc = PyPDF2.PdfReader(pdf_path)
-    output = PyPDF2.PdfWriter()
+    doc = pypdf.PdfReader(pdf_path)
+    output = pypdf.PdfWriter()
     
     for page_num in new_order:
         output.add_page(doc.pages[page_num])
@@ -59,7 +59,7 @@ def main():
             f.write(uploaded_file.getbuffer())
 
         # 顯示預覽圖
-        num_pages = len(PyPDF2.PdfReader(pdf_path).pages)
+        num_pages = len(pypdf.PdfReader(pdf_path).pages)
         thumbnails = []
         for i in range(min(num_pages, 6)):  # 只顯示最多6個頁面
             thumbnail = generate_thumbnail(pdf_path, i)
@@ -68,7 +68,7 @@ def main():
         # 顯示 6 個頁面縮略圖（水平排列）
         cols = st.columns(6)
         for i, thumb in enumerate(thumbnails):
-            cols[i].image(thumb, use_column_width=True)
+            cols[i].image(thumb, use_container_width=True)  # 使用 use_container_width
 
         # 旋轉控制
         selected_page = st.slider("選擇旋轉頁面", 0, num_pages - 1, 0)
