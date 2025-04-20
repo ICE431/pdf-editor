@@ -132,9 +132,10 @@ def main():
                             pdf_page_info.append((pdf_path, idx))
 
         # 執行刪除
+        updated_pdf_paths = pdf_paths[:]
         for pdf_path, idx, action in all_actions:
             if action == '刪除':
-                pdf_paths[0] = delete_page(pdf_path, idx)
+                updated_pdf_paths[0] = delete_page(pdf_path, idx)
                 st.success(f"頁面 {idx+1} 已刪除")
 
         # 執行旋轉
@@ -146,7 +147,7 @@ def main():
                     index=0,
                     key=f"angle_{pdf_path}_{idx}"
                 )
-                pdf_paths[0] = rotate_pdf(pdf_path, idx, angle)
+                updated_pdf_paths[0] = rotate_pdf(pdf_path, idx, angle)
                 st.success(f"頁面 {idx+1} 已旋轉 {angle} 度")
 
         # 合併排序選單
@@ -172,7 +173,7 @@ def main():
         if len(uploaded_files) > 1:
             st.subheader("📄 合併多個 PDF 文件")
             if st.button("合併文件"):
-                merged_pdf = merge_pdfs(pdf_paths)
+                merged_pdf = merge_pdfs(updated_pdf_paths)
                 st.success("✅ 合併完成")
 
                 # 下載合併後的 PDF 文件
