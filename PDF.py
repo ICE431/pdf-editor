@@ -36,29 +36,6 @@ def generate_thumbnail(pdf_path, page_num):
     img.thumbnail((300, 300))  # 設定縮圖最大寬高為300
     return img
 
-# 旋轉頁面
-def rotate_pdf(pdf_path, page_num, angle):
-    reader = pypdf.PdfReader(pdf_path)
-    writer = pypdf.PdfWriter()
-    for i, page in enumerate(reader.pages):
-        if i == page_num:
-            page.rotate(angle)
-        writer.add_page(page)
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
-        writer.write(temp)
-        return temp.name
-
-# 刪除頁面
-def delete_page(pdf_path, page_num):
-    reader = pypdf.PdfReader(pdf_path)
-    writer = pypdf.PdfWriter()
-    for i, page in enumerate(reader.pages):
-        if i != page_num:
-            writer.add_page(page)
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
-        writer.write(temp)
-        return temp.name
-
 # 重新排序頁面
 def reorder_pdf(pdf_path, new_order):
     reader = pypdf.PdfReader(pdf_path)
@@ -100,6 +77,7 @@ def main():
         all_rotation_angles = []  # 用於記錄所有的旋轉角度
 
         st.subheader("🖼 預覽與操作")
+        reordered_pdfs = []
         for pdf_path in pdf_paths:
             reader = pypdf.PdfReader(pdf_path)
             num_pages = len(reader.pages)
@@ -147,33 +125,38 @@ def main():
 
         # 重新排序頁面
         st.subheader("🔀 重新排序頁面")
-        page_order = list(range(len(pypdf.PdfReader(pdf_paths[0]).pages)))
-        
-        # 更新為選擇頁面順序
-        reordered = st.multiselect(
-            "請選擇頁面順序 (拖動排序)",
-            options=page_order,
-            format_func=lambda x: f"頁面 {x+1}",
-            key="reorder_selectbox"
-        )
-        
-        if reordered != page_order:
-            pdf_paths[0] = reorder_pdf(pdf_paths[0], reordered)
-            st.success("✅ 頁面順序已更新")
+        reordered_pdfs = []
+        for pdf_path in pdf_paths:
+            reader = pypdf.PdfReader(pdf_path)
+            page_order = list(range(len(reader.pages)))
+
+            reordered = st.multiselect(
+                f"請選擇 {pdf_path} 頁面的順序",
+                options=page_order,
+                format_func=lambda x: f"頁面 {x+1}",
+                key=f"reorder_selectbox_{pdf_path}"
+            )
+
+            if reordered:
+                reordered_pdf = reorder_pdf(pdf_path, reordered)
+                reordered_pdfs.append(reordered_pdf)
+                st.success(f"PDF 頁面已排序")
+            else:
+                reordered_pdfs.append(pdf_path)
 
         # 合併選項
         if len(uploaded_files) > 1:
             st.subheader("📄 合併多個 PDF 文件")
             if st.button("合併文件"):
-                merged_pdf = merge_pdfs(pdf_paths)
+                merged_pdf = merge_pdfs(reordered_pdfs)
                 st.success("✅ 合併完成")
 
                 # 下載合併後的 PDF 文件
                 with open(merged_pdf, "rb") as f:
-                    st.download_button("📥 下載合併後的 PDF", f, file_name="merged.pdf")
+                    st.download_button("📥 下載合併後的 PDF", f, file_name="merged_sorted.pdf")
 
         # 下載編輯後的 PDF 文件
-        with open(pdf_paths[0], "rb") as f:
+        with open(reordered_pdfs[0], "rb") as f:
             st.download_button("📥 下載編輯後的 PDF", f, file_name="edited.pdf")
 
 if __name__ == "__main__":
