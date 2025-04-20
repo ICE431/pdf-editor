@@ -14,8 +14,6 @@ if uploaded_files:
     st.header("👀 預覽並操作每一頁")
 
     all_pages = []
-    remove_flags = []
-    rotate_degrees = []
     page_info_list = []  # 用來儲存每頁的基本資料
 
     page_counter = 0  # 用來計數每一頁顯示的順序
