@@ -17,24 +17,23 @@ def generate_thumbnail(pdf_path, page_num):
 
 # PDF 旋轉
 def rotate_pdf(pdf_path, page_num, angle):
+    # Open the PDF file
     doc = PyPDF2.PdfReader(pdf_path)
+    page = doc.pages[page_num]
+    
+    # Rotate the page
+    page.rotate_clockwise(angle)
+    
+    # Write the rotated PDF
     output = PyPDF2.PdfWriter()
-    
-    # Rotate the specified page
-    for i in range(len(doc.pages)):
-        page = doc.pages[i]
-        if i == page_num:
-            page.rotate_clockwise(angle)  # Rotate the selected page
-        output.add_page(page)
-    
-    # Save to temporary file
+    output.add_page(page)
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
         temp_file.close()
         with open(temp_file.name, 'wb') as f:
             output.write(f)
     return temp_file.name
 
-# 頁面排序（這裏是用自訂排序邏輯）
+# 頁面排序（這裏是用 st.selectbox 或 st.multiselect）
 def reorder_pdf(pdf_path, new_order):
     doc = PyPDF2.PdfReader(pdf_path)
     output = PyPDF2.PdfWriter()
@@ -78,7 +77,6 @@ def main():
         if angle != 0:
             rotated_pdf = rotate_pdf(pdf_path, selected_page, angle)
             st.success(f"頁面 {selected_page + 1} 已旋轉 {angle} 度！")
-            pdf_path = rotated_pdf  # 更新 PDF 路徑為旋轉後的文件
 
         # 頁面排序
         page_order = list(range(num_pages))
@@ -92,7 +90,6 @@ def main():
         if new_order != page_order:
             reordered_pdf = reorder_pdf(pdf_path, new_order)
             st.success("頁面排序已更新！")
-            pdf_path = reordered_pdf  # 更新 PDF 路徑為排序後的文件
             
         # 顯示合併後的 PDF 下載鏈接
         with open(pdf_path, "rb") as f:
