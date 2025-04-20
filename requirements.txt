@@ -1,5 +1,4 @@
-streamlit
-pypdf
-PyMuPDF
-Pillow
-streamlit-draggable
+streamlit==1.44.1
+pypdf==5.4.0
+PyMuPDF==1.25.5
+Pillow==11.2.1
