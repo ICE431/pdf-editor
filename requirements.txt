@@ -1,5 +1,5 @@
-streamlit==1.18.0
-pypdf==4.0.2
-PyMuPDF==1.21.1
-Pillow==9.3.0
-streamlit-draggable==0.2.0  # 這是可用的版本，您可以根據需要調整版本號
+streamlit
+pypdf
+PyMuPDF
+Pillow
+streamlit-drag-drop
