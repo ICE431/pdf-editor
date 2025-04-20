@@ -5,7 +5,10 @@ import fitz  # PyMuPDF
 import tempfile
 from st_draggable_list import DraggableList
 
-# 文清風格樣式
+# 安裝 st-draggable-list 套件
+# pip install st-draggable-list
+
+# 設定樣式
 def set_style():
     st.markdown("""
     <style>
@@ -75,6 +78,7 @@ def main():
     uploaded_file = st.file_uploader("請上傳 PDF 文件", type="pdf")
 
     if uploaded_file:
+        # 儲存到暫存目錄
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
             tmp.write(uploaded_file.read())
             pdf_path = tmp.name
@@ -82,50 +86,60 @@ def main():
         reader = pypdf.PdfReader(pdf_path)
         num_pages = len(reader.pages)
 
-        # 產生縮圖 & UI
-        st.subheader("🖼 預覽與操作")
-        actions = [None] * num_pages
-        angles = [0] * num_pages
+        # 顯示所有頁面縮圖
+        thumbnails = [generate_thumbnail(pdf_path, i) for i in range(num_pages)]
+        actions = []
+        rotation_angles = []
 
+        st.subheader("🖼 預覽與操作")
         for i in range(0, num_pages, 6):
             cols = st.columns(6)
             for j in range(6):
                 idx = i + j
                 if idx < num_pages:
                     with cols[j]:
-                        try:
-                            thumbnail = generate_thumbnail(pdf_path, idx)
-                            st.image(thumbnail, use_container_width=True)
-                        except:
-                            st.warning(f"無法載入頁面 {idx+1} 預覽")
+                        st.image(thumbnails[idx], use_container_width=True)
+                        action = st.radio(
+                            f"頁面 {idx+1}",
+                            ['無動作', '旋轉', '刪除'],
+                            key=f"action_{idx}"
+                        )
+                        actions.append(action)
 
-                        action = st.radio(f"頁面 {idx+1}", ["無動作", "旋轉", "刪除"], key=f"action_{idx}")
-                        actions[idx] = action
-                        if action == "旋轉":
-                            angles[idx] = st.selectbox("角度", [90, 180, 270], key=f"angle_{idx}")
+                        if action == '旋轉':
+                            angle = st.selectbox(
+                                f"旋轉角度 (頁面 {idx+1})",
+                                [90, 180, 270],
+                                index=0,
+                                key=f"angle_{idx}"
+                            )
+                            rotation_angles.append((idx, angle))
+                        else:
+                            rotation_angles.append((idx, 0))
 
-        # 執行刪除（先做刪除避免索引混亂）
-        for idx in reversed(range(len(actions))):
-            if actions[idx] == "刪除":
+        # 執行刪除
+        for idx, action in enumerate(actions):
+            if action == '刪除':
                 pdf_path = delete_page(pdf_path, idx)
-                st.success(f"✅ 頁面 {idx+1} 已刪除")
+                st.success(f"頁面 {idx+1} 已刪除")
                 st.experimental_rerun()
 
         # 執行旋轉
-        for idx, angle in enumerate(angles):
-            if actions[idx] == "旋轉" and angle in [90, 180, 270]:
+        for idx, angle in rotation_angles:
+            if angle != 0:
                 pdf_path = rotate_pdf(pdf_path, idx, angle)
-                st.success(f"✅ 頁面 {idx+1} 已旋轉 {angle} 度")
+                st.success(f"頁面 {idx+1} 已旋轉 {angle} 度")
                 st.experimental_rerun()
 
         # 拖曳排序
         st.subheader("🔀 拖曳重新排序頁面")
-        page_count = len(pypdf.PdfReader(pdf_path).pages)
-        reorder_data = [{"id": i, "label": f"頁面 {i+1}"} for i in range(page_count)]
-        reordered = DraggableList(reorder_data, key="reorder_list")
+        reorder_data = [
+            {"id": i, "label": f"頁面 {i+1}"} for i in range(len(pypdf.PdfReader(pdf_path).pages))
+        ]
+        reordered = DraggableList(reorder_data, key="pdf_reorder")
         new_order = [item["id"] for item in reordered]
 
-        if new_order != list(range(page_count)):
+        if new_order != list(range(len(new_order))):
             pdf_path = reorder_pdf(pdf_path, new_order)
             st.success("✅ 頁面順序已更新")
             st.experimental_rerun()
