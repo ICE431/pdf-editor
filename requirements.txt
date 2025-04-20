@@ -2,4 +2,4 @@ streamlit
 pypdf
 PyMuPDF
 Pillow
-streamlit-draggable-list
+st-draggable-list
