@@ -40,6 +40,7 @@ if uploaded_files:
             col_index = page_counter % 6  # 找到對應欄位的索引
             
             with cols[col_index]:
+                # 顯示旋轉後的圖像
                 st.image(img, caption=label, use_column_width=True)
 
             with cols[(col_index + 1) % 6]:  # 旋轉與刪除按鈕
@@ -67,7 +68,7 @@ if uploaded_files:
             
             page_counter += 1  # 計數
 
-    # 顯示可拖動的頁面列表
+    # 使用 DraggableList 顯示可排序的頁面列表
     draggable_list = DraggableList(page_info_list, key="pdf_pages", width="100%")
     st.write(draggable_list)
 
