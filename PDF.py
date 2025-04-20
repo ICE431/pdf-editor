@@ -100,7 +100,9 @@ def main():
         all_rotation_angles = []  # 用於記錄所有的旋轉角度
 
         st.subheader("🖼 預覽與操作")
-        reordered_pdfs = []
+        all_page_order = []  # 用於儲存所有頁面操作的順序
+
+        # 顯示每個 PDF 文件的縮圖並處理頁面操作
         for pdf_path in pdf_paths:
             reader = pypdf.PdfReader(pdf_path)
             num_pages = len(reader.pages)
@@ -148,7 +150,7 @@ def main():
 
         # 重新排序頁面
         st.subheader("🔀 重新排序頁面")
-        reordered_pdfs = []
+        all_page_order = []
         for pdf_path in pdf_paths:
             reader = pypdf.PdfReader(pdf_path)
             page_order = list(range(len(reader.pages)))
@@ -162,16 +164,16 @@ def main():
 
             if reordered:
                 reordered_pdf = reorder_pdf(pdf_path, reordered)
-                reordered_pdfs.append(reordered_pdf)
+                all_page_order.append(reordered_pdf)
                 st.success(f"PDF 頁面已排序")
             else:
-                reordered_pdfs.append(pdf_path)
+                all_page_order.append(pdf_path)
 
         # 合併選項
         if len(uploaded_files) > 1:
             st.subheader("📄 合併多個 PDF 文件")
             if st.button("合併文件"):
-                merged_pdf = merge_pdfs(reordered_pdfs)
+                merged_pdf = merge_pdfs(all_page_order)
                 st.success("✅ 合併完成")
 
                 # 下載合併後的 PDF 文件
@@ -179,7 +181,7 @@ def main():
                     st.download_button("📥 下載合併後的 PDF", f, file_name="merged_sorted.pdf")
 
         # 下載編輯後的 PDF 文件
-        with open(reordered_pdfs[0], "rb") as f:
+        with open(all_page_order[0], "rb") as f:
             st.download_button("📥 下載編輯後的 PDF", f, file_name="edited.pdf")
 
 if __name__ == "__main__":
