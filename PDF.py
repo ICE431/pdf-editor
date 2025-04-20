@@ -1,62 +1,4 @@
-import streamlit as st
-import pypdf
-from PIL import Image
-import fitz  # PyMuPDF
-import tempfile
-
-# 文清風格樣式
-def set_style():
-    st.markdown("""
-    <style>
-    body {
-        background-color: #f9f9f9;
-        font-family: "Noto Sans TC", sans-serif;
-    }
-    .stButton>button {
-        background-color: #6a9dff;
-        color: white;
-        font-size: 16px;
-        border-radius: 6px;
-        padding: 6px 12px;
-    }
-    .stSelectbox>div>div {
-        background-color: #eef3fa;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-# 產生縮圖
-def generate_thumbnail(pdf_path, page_num):
-    doc = fitz.open(pdf_path)
-    page = doc.load_page(page_num)
-    pix = page.get_pixmap(matrix=fitz.Matrix(0.4, 0.4))
-    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-    return img
-
-# 旋轉頁面
-def rotate_pdf(pdf_path, page_num, angle):
-    reader = pypdf.PdfReader(pdf_path)
-    writer = pypdf.PdfWriter()
-    for i, page in enumerate(reader.pages):
-        if i == page_num:
-            page.rotate(angle)
-        writer.add_page(page)
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
-        writer.write(temp)
-        return temp.name
-
-# 刪除頁面
-def delete_page(pdf_path, page_num):
-    reader = pypdf.PdfReader(pdf_path)
-    writer = pypdf.PdfWriter()
-    for i, page in enumerate(reader.pages):
-        if i != page_num:
-            writer.add_page(page)
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
-        writer.write(temp)
-        return temp.name
-
-# 重新排序頁面
+# 重新排序 PDF 頁面
 def reorder_pdf(pdf_path, new_order):
     reader = pypdf.PdfReader(pdf_path)
     writer = pypdf.PdfWriter()
@@ -66,7 +8,6 @@ def reorder_pdf(pdf_path, new_order):
         writer.write(temp)
         return temp.name
 
-# 主介面
 def main():
     set_style()
     st.title("📄 PDF 編輯器")
@@ -127,20 +68,21 @@ def main():
                 st.success(f"頁面 {idx+1} 已旋轉 {angle} 度")
                 st.experimental_rerun()
 
-        # 重新排序
-        st.subheader("🔀 重新排序頁面")
-        # 生成頁面選項
-        page_order = list(range(num_pages))
-        reordered = st.selectbox(
-            "選擇頁面順序 (如有更改)",
-            page_order,
-            format_func=lambda x: f"頁面 {x+1}",
-            key="reorder_selectbox"
-        )
+        # 拖曳排序
+        st.subheader("🔀 拖曳重新排序頁面")
+        reorder_data = [
+            {"id": i, "label": f"頁面 {i+1}"} for i in range(len(pypdf.PdfReader(pdf_path).pages))
+        ]
+        reordered = DraggableList(reorder_data, key="pdf_reorder")
         
-        # 當頁面順序有變動時，更新 PDF
-        if reordered != page_order:
-            pdf_path = reorder_pdf(pdf_path, reordered)
+        # 確保返回的 reordered 是一個可迭代的列表
+        if isinstance(reordered, list):
+            new_order = [item["id"] for item in reordered]
+        else:
+            new_order = list(range(len(reorder_data)))
+
+        if new_order != list(range(len(new_order))):
+            pdf_path = reorder_pdf(pdf_path, new_order)
             st.success("✅ 頁面順序已更新")
             st.experimental_rerun()
 
