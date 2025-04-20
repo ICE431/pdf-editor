@@ -18,6 +18,8 @@ if uploaded_files:
     rotate_degrees = []
     page_info_list = []  # 用來儲存每頁的基本資料
 
+    page_counter = 0  # 用來計數每一頁顯示的順序
+
     for uploaded_file in uploaded_files:
         file_name = uploaded_file.name
         doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
@@ -31,20 +33,22 @@ if uploaded_files:
             img = img.resize((int(pix.width * 0.7), int(pix.height * 0.7)))
 
             label = f"{file_name} - 第 {i+1} 頁"
-            col1, col2 = st.columns([2, 1])
-            with col1:
+            
+            # 每行顯示 6 張圖片
+            if page_counter % 6 == 0:
+                cols = st.columns(6)  # 每行 6 張圖片
+            col_index = page_counter % 6  # 找到對應欄位的索引
+            
+            with cols[col_index]:
                 st.image(img, caption=label, use_column_width=True)
 
-            with col2:
-                # 刪除 checkbox
+            with cols[(col_index + 1) % 6]:  # 旋轉與刪除按鈕
                 remove = st.checkbox(f"刪除這一頁", key=f"remove_{file_name}_{i}")
-
-                # 初始化旋轉角度（記錄在 session）
+                
                 rotate_key = f"rotate_angle_{file_name}_{i}"
                 if rotate_key not in st.session_state:
                     st.session_state[rotate_key] = 0
 
-                # 旋轉按鈕（每次點就加 90）
                 rotate_btn_key = f"rotate_btn_{file_name}_{i}"
                 if st.button("🔄 旋轉 90°", key=rotate_btn_key):
                     st.session_state[rotate_key] = (st.session_state[rotate_key] + 90) % 360
@@ -60,6 +64,8 @@ if uploaded_files:
                 "remove": remove
             }
             page_info_list.append(page_info)
+            
+            page_counter += 1  # 計數
 
     # 顯示可拖動的頁面列表
     draggable_list = DraggableList(page_info_list, key="pdf_pages", width="100%")
