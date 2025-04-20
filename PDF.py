@@ -2,11 +2,11 @@ import streamlit as st
 from pypdf import PdfReader, PdfWriter
 import fitz  # PyMuPDF
 from PIL import Image
-from st_draggable_list import DraggableList
 import tempfile
+from st_draggable_list import DraggableList
 
 st.set_page_config(page_title="PDF 編輯器", page_icon="📄", layout="wide")
-st.title("📄 PDF 可視化編輯工具（預覽、刪除、旋轉、排序）")
+st.title("📄 PDF 可視化編輯工具（預覽、刪除、旋轉）")
 
 uploaded_files = st.file_uploader("📤 上傳 PDF（可多選）", type="pdf", accept_multiple_files=True)
 
@@ -16,80 +16,73 @@ if uploaded_files:
     all_pages = []
     remove_flags = []
     rotate_degrees = []
-    page_labels = []
+    page_info_list = []  # 用來儲存每頁的基本資料
 
-    page_info_list = []
-
-    # 收集所有 PDF 頁面資訊
-    for file_index, uploaded_file in enumerate(uploaded_files):
+    for uploaded_file in uploaded_files:
         file_name = uploaded_file.name
         doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
         uploaded_file.seek(0)
 
-        for page_index, page in enumerate(doc):
-            pix = page.get_pixmap(dpi=100)
+        for i, page in enumerate(doc):
+            pix = page.get_pixmap(dpi=70)
             img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-            img = img.resize((int(pix.width * 0.5), int(pix.height * 0.5)))  # 縮圖 50%
 
-            label = f"{file_name} - 第 {page_index+1} 頁"
-            rotate_key = f"rotate_{file_index}_{page_index}"
-            if rotate_key not in st.session_state:
-                st.session_state[rotate_key] = 0
+            # ✅ 縮小預覽 70%
+            img = img.resize((int(pix.width * 0.7), int(pix.height * 0.7)))
 
-            page_info_list.append({
-                "file_index": file_index,
+            label = f"{file_name} - 第 {i+1} 頁"
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                st.image(img, caption=label, use_column_width=True)
+
+            with col2:
+                # 刪除 checkbox
+                remove = st.checkbox(f"刪除這一頁", key=f"remove_{file_name}_{i}")
+
+                # 初始化旋轉角度（記錄在 session）
+                rotate_key = f"rotate_angle_{file_name}_{i}"
+                if rotate_key not in st.session_state:
+                    st.session_state[rotate_key] = 0
+
+                # 旋轉按鈕（每次點就加 90）
+                rotate_btn_key = f"rotate_btn_{file_name}_{i}"
+                if st.button("🔄 旋轉 90°", key=rotate_btn_key):
+                    st.session_state[rotate_key] = (st.session_state[rotate_key] + 90) % 360
+
+                st.text(f"目前旋轉：{st.session_state[rotate_key]}°")
+
+            # 儲存基本資料
+            page_info = {
                 "file_name": file_name,
-                "uploaded_file": uploaded_file,
-                "page_index": page_index,
+                "page_num": i,
                 "label": label,
-                "img": img,
-                "rotate_key": rotate_key
-            })
+                "rotate_angle": st.session_state[rotate_key],
+                "remove": remove
+            }
+            page_info_list.append(page_info)
 
-    # 使用 DraggableList 顯示可排序的頁面列表
+    # 顯示可拖動的頁面列表
     draggable_list = DraggableList(page_info_list, key="pdf_pages", width="100%")
     st.write(draggable_list)
 
-    # 排序後的頁面順序
-    sorted_pages = draggable_list
-
-    # 顯示排序後的頁面預覽
-    for idx, info in enumerate(sorted_pages):
-        with st.expander(f"📄 頁面 {idx + 1}: {info['label']}"):
-            st.image(info["img"], caption=info["label"], use_column_width=True)
-
-            remove = st.checkbox("刪除", key=f"remove_{info['file_index']}_{info['page_index']}")
-            if st.button("🔄 旋轉 90°", key=f"rotate_btn_{info['file_index']}_{info['page_index']}"):
-                st.session_state[info["rotate_key"]] = (st.session_state[info["rotate_key"]] + 90) % 360
-
-            st.caption(f"旋轉角度：{st.session_state[info['rotate_key']]}°")
-
-            all_pages.append((
-                info["file_index"],
-                info["file_name"],
-                info["uploaded_file"],
-                info["page_index"]
-            ))
-            remove_flags.append(remove)
-            rotate_degrees.append(st.session_state[info["rotate_key"]])
-            page_labels.append(info["label"])
-
-    # 合併 PDF
     if st.button("📎 合併 PDF"):
         writer = PdfWriter()
 
-        for idx in range(len(all_pages)):
-            if remove_flags[idx]:
-                continue
+        for page_info in draggable_list:
+            if page_info['remove']:
+                continue  # 刪除選中的頁面
 
-            file_index, file_name, file, page_num = all_pages[idx]
-
-            file.seek(0)
+            file_name = page_info['file_name']
+            page_num = page_info['page_num']
+            file = next(f for f in uploaded_files if f.name == file_name)
+            file.seek(0)  # 重設文件指標
             reader = PdfReader(file)
             page = reader.pages[page_num]
 
-            if rotate_degrees[idx]:
-                page.rotate(rotate_degrees[idx])
+            # 根據旋轉角度進行旋轉
+            degrees = page_info['rotate_angle']
+            if degrees:
+                page.rotate(degrees)
 
             writer.add_page(page)
 
