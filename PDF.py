@@ -25,8 +25,8 @@ if uploaded_files:
             pix = page.get_pixmap(dpi=70)
             img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
 
-            # ✅ 縮小預覽 70%
-            img = img.resize((int(pix.width * 0.7), int(pix.height * 0.7)))
+            # ✅ 預覽縮小為 50%
+            img = img.resize((int(pix.width * 0.5), int(pix.height * 0.5)))
 
             label = f"{file_name} - 第 {i+1} 頁"
             col1, col2 = st.columns([2, 1])
