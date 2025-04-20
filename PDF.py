@@ -61,14 +61,21 @@ def main():
         # 顯示預覽圖
         num_pages = len(pypdf.PdfReader(pdf_path).pages)
         thumbnails = []
-        for i in range(min(num_pages, 6)):  # 只顯示最多6個頁面
+        for i in range(num_pages):  # 顯示所有頁面的縮略圖
             thumbnail = generate_thumbnail(pdf_path, i)
             thumbnails.append(thumbnail)
         
-        # 顯示 6 個頁面縮略圖（水平排列）
-        cols = st.columns(6)
-        for i, thumb in enumerate(thumbnails):
-            cols[i].image(thumb, use_container_width=True)  # 使用 use_container_width
+        # 計算應顯示的列數
+        columns_per_row = 3  # 每行顯示3個頁面
+        rows = (num_pages // columns_per_row) + (1 if num_pages % columns_per_row != 0 else 0)
+        
+        # 顯示預覽圖（每行顯示3個頁面）
+        for row in range(rows):
+            cols = st.columns(columns_per_row)
+            for col in range(columns_per_row):
+                page_index = row * columns_per_row + col
+                if page_index < num_pages:  # 確保不會超出頁數
+                    cols[col].image(thumbnails[page_index], use_container_width=True)  # 使用 use_container_width
 
         # 旋轉控制
         selected_page = st.slider("選擇旋轉頁面", 0, num_pages - 1, 0)
