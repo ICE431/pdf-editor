@@ -48,33 +48,12 @@ def delete_pages(pdf_path, pages_to_delete):
         writer.write(temp)
         return temp.name
 
-# 旋轉頁面
-def rotate_pages(pdf_path, rotate_actions):
-    doc = fitz.open(pdf_path)
-    for page_num, angle in rotate_actions.items():
-        page = doc.load_page(page_num)
-        page.set_rotation((page.rotation + angle) % 360)  # 確保旋轉角度正確
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
-        doc.save(temp.name)
-        return temp.name
-
-# 重新排序
-def reorder_pdf_pages(pdf_path, new_order):
-    reader = pypdf.PdfReader(pdf_path)
+# 合併 + 重新排序
+def merge_and_reorder_pages(pages):
     writer = pypdf.PdfWriter()
-    for i in new_order:
-        writer.add_page(reader.pages[i])
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
-        writer.write(temp)
-        return temp.name
-
-# 合併 PDF
-def merge_pdfs(pdf_paths):
-    writer = pypdf.PdfWriter()
-    for path in pdf_paths:
-        reader = pypdf.PdfReader(path)
-        for page in reader.pages:
-            writer.add_page(page)
+    for pdf_path, page_num in pages:
+        reader = pypdf.PdfReader(pdf_path)
+        writer.add_page(reader.pages[page_num])
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
         writer.write(temp)
         return temp.name
@@ -82,28 +61,26 @@ def merge_pdfs(pdf_paths):
 # 主介面
 def main():
     set_style()
-    st.title("📄 PDF 編輯器")
+    st.title("📄 PDF 編輯器（刪除 / 合併 / 重新排序）")
 
-    uploaded_files = st.file_uploader("請上傳 PDF 文件", type="pdf", accept_multiple_files=True)
+    uploaded_files = st.file_uploader("請上傳一個或多個 PDF 文件", type="pdf", accept_multiple_files=True)
 
     if uploaded_files:
+        # 儲存上傳的檔案
         pdf_paths = []
         for uploaded_file in uploaded_files:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
                 tmp.write(uploaded_file.read())
                 pdf_paths.append(tmp.name)
 
-        st.subheader("🖼 預覽與操作")
-        all_actions = []
+        st.subheader("🖼 預覽與刪除")
+        pages_to_keep = []  # 所有要保留的頁面 (for排序與合併)
         thumbnails_all = []
 
-        for pdf_index, pdf_path in enumerate(pdf_paths):
+        for pdf_path in pdf_paths:
             reader = pypdf.PdfReader(pdf_path)
             thumbnails = generate_thumbnails_once(pdf_path)
             thumbnails_all.append((pdf_path, thumbnails, len(reader.pages)))
-
-        pages_to_delete = {}
-        rotate_actions = {}
 
         for pdf_path, thumbnails, total_pages in thumbnails_all:
             for i in range(0, total_pages, 6):
@@ -113,70 +90,29 @@ def main():
                     if idx < total_pages:
                         with cols[j]:
                             st.image(thumbnails[idx], use_container_width=True)
-                            action = st.radio(
-                                f"頁面 {idx+1}",
-                                ['無動作', '刪除', '旋轉'],
-                                key=f"action_{pdf_path}_{idx}"
-                            )
+                            keep = st.checkbox(f"保留頁面 {idx+1}", value=True, key=f"{pdf_path}_{idx}")
+                            if keep:
+                                pages_to_keep.append((pdf_path, idx))
 
-                            if action == '刪除':
-                                pages_to_delete.setdefault(pdf_path, []).append(idx)
-                            elif action == '旋轉':
-                                angle = st.selectbox(
-                                    f"旋轉角度 (頁面 {idx+1})",
-                                    [90, 180, 270],
-                                    key=f"angle_{pdf_path}_{idx}"
-                                )
-                                rotate_actions.setdefault(pdf_path, {})[idx] = angle
+        if not pages_to_keep:
+            st.warning("請至少保留一個頁面。")
+            return
 
-        # 套用刪除與旋轉操作
-        updated_pdf_paths = []
-        for original_path in pdf_paths:
-            temp_path = original_path
-            if original_path in pages_to_delete:
-                temp_path = delete_pages(temp_path, pages_to_delete[original_path])
-            if original_path in rotate_actions:
-                temp_path = rotate_pages(temp_path, rotate_actions[original_path])
-            updated_pdf_paths.append(temp_path)
-
-        # 取得所有頁面的資訊供排序使用
-        all_pages = []
-        for path in updated_pdf_paths:
-            reader = pypdf.PdfReader(path)
-            for idx in range(len(reader.pages)):
-                all_pages.append((path, idx))
-
-        st.subheader("🔀 重新排序所有 PDF 頁面")
-        page_order = list(range(len(all_pages)))
+        st.subheader("🔀 重新排序 + 合併 PDF")
+        default_order = list(range(len(pages_to_keep)))
         reordered = st.multiselect(
-            "請選擇所有頁面順序",
-            options=page_order,
-            format_func=lambda x: f"頁面 {x+1}",
-            key="reorder_selectbox"
+            "請選擇輸出頁面順序",
+            options=default_order,
+            format_func=lambda x: f"{x+1}: PDF第 {pages_to_keep[x][1]+1} 頁",
+            default=default_order
         )
 
         if reordered:
-            # 將所有選擇的頁面順序組成新 PDF
-            writer = pypdf.PdfWriter()
-            for idx in reordered:
-                pdf_path, page_num = all_pages[idx]
-                reader = pypdf.PdfReader(pdf_path)
-                writer.add_page(reader.pages[page_num])
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
-                writer.write(temp)
-                st.success("✅ 頁面順序已更新")
-                with open(temp.name, "rb") as f:
-                    st.download_button("📥 下載編輯後的 PDF", f, file_name="edited_sorted.pdf")
-
-        if len(updated_pdf_paths) > 1:
-            st.subheader("📄 合併多個 PDF 文件")
-            if st.button("合併文件"):
-                merged_pdf = merge_pdfs(updated_pdf_paths)
-                st.success("✅ 合併完成")
-                with open(merged_pdf, "rb") as f:
-                    st.download_button("📥 下載合併後的 PDF", f, file_name="merged_sorted.pdf")
-
-        st.info("🔧 所有操作（刪除、旋轉、排序）完成後，請下載或合併輸出 PDF。")
+            sorted_pages = [pages_to_keep[i] for i in reordered]
+            merged_pdf = merge_and_reorder_pages(sorted_pages)
+            st.success("✅ 已重新排序並合併頁面")
+            with open(merged_pdf, "rb") as f:
+                st.download_button("📥 下載最終 PDF", f, file_name="merged_reordered.pdf")
 
 if __name__ == "__main__":
     main()
