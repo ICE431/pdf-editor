@@ -54,7 +54,9 @@ def rotate_pages(pdf_path, rotate_actions):
     writer = pypdf.PdfWriter()
     for i, page in enumerate(reader.pages):
         if i in rotate_actions:
-            page.rotate_clockwise(rotate_actions[i])
+            current_rotation = page.get("/Rotate", 0)
+            new_rotation = (current_rotation + rotate_actions[i]) % 360
+            page["/Rotate"] = new_rotation
         writer.add_page(page)
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
         writer.write(temp)
