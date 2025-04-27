@@ -50,16 +50,12 @@ def delete_pages(pdf_path, pages_to_delete):
 
 # 旋轉頁面
 def rotate_pages(pdf_path, rotate_actions):
-    reader = pypdf.PdfReader(pdf_path)
-    writer = pypdf.PdfWriter()
-    for i, page in enumerate(reader.pages):
-        if i in rotate_actions:
-            current_rotation = page.get("/Rotate", 0)
-            new_rotation = (current_rotation + rotate_actions[i]) % 360
-            page["/Rotate"] = new_rotation
-        writer.add_page(page)
+    doc = fitz.open(pdf_path)
+    for page_num, angle in rotate_actions.items():
+        page = doc.load_page(page_num)
+        page.set_rotation((page.rotation + angle) % 360)  # 確保旋轉角度正確
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
-        writer.write(temp)
+        doc.save(temp.name)
         return temp.name
 
 # 重新排序
